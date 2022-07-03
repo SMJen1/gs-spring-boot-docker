@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: ha-dep
+  name: ha-deploy 
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: ha-dep
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: ha-dep
+    spec:
+      containers:
+      - image: admdevopscit/capst01_22:latest
+        name: hello-world
+        resources: 
+         limits: 
+          cpu: 100m
+         requests: 
+          cpu: 100m
+## strategy - Expose the deployment 
+## kubectl expose deployment  ha-deploy --name ha-scale-svc --port 80
+
+## Autoscale the deployment
+## kubectl autoscale deployment hpa-deployment --cpu-percent 50 --min 3 --max 8
+
+## Get the IP address of the svc
+## kubectl get svc
+
+# Generate Load on the deployment
+# On Worker2
+# sudo apt update --fix-missing
+# sudo apt install apache2-utils
+# ab -n 500000 -c 1000   
+# ab -n 500000 -c 1000  http://10.110.52.57/
+
+
+# Watch the autoscaling in action on master
+# watch kubectl top pods 
+
+
