@@ -1,0 +1,791 @@
+Project : Create a DevOps infrastructure for an e-commerce application to run on high-availability mode.
+
+
+
+
+1.	Introduction: 
+In the following project, we have used Kubernetes, Docker, GitHub and  Terraform technologies from open-sources for deploying, scaling and managing containerized applications automatically. Moreover, we have deployed the solutions on a variety of Cloud providers such as Azure, Google Cloud and AWS to illustrate the seamless integration of GitHub to Containerization, configuration management and finally orchestration of the application containers/pods using Kubernetes. 
+
+2.	Test an application Using Springboot framework with Maven 
+Ref:  
+https://spring.io/guides/gs/spring-boot-docker/
+
+Configure application on the pod, using SimpliLearn platform
+2.1 Check Java installation
+  - java -version
+ 
+2.2 Check Maven installation  
+  - mvn -version
+ 
+2.3 Check Git installation
+  git --version 
+ 
+2.4 Check Docker installation 
+  docker -v
+ 
+
+2.5 Clone Spring based web application
+  - git clone https://github.com/spring-guides/gs-spring-boot-docker.git
+ 
+
+2.6 Change directory
+  - cd gs-spring-boot-docker/complete
+
+ 
+2.7 Build jar package
+  - ./mvnw package
+
+2.8 Console output: Build success - Check
+ 
+2.9 Run application
+  - java -jar target/spring-boot-docker-complete-0.0.1-SNAPSHOT.jar   
+ 
+2.10 Test on web browser
+ 
+Correct output – “Hello Docker World”
+
+2.11 Unit Test run 
+It is very important to test application, including code coverage to indicate that changes during CI are regularly and fully covered by code check. Code coverage is a metric that can help understand how much of source is tested. It's a very useful metric to assess the quality of our  test suite, and we will see here how you can get started with your projects.
+
+We first focus on Unit test. Unit tests consist is making sure that the individual methods of the classes and components used by the application are working. The unit test is included in the test source from Github. 
+Test source: https://github.com/SMJen1/gs-spring-boot-docker/blob/main/complete/src/test/java/hello/HelloWorldConfigurationTests.java
+To check if the code is running the unit test (@test) see console output after firing 
+  - ./mvnw package
+ 
+ 
+Application was successfully tested
+ 
+3.	Create a Docker file
+
+Next we create a dockefile as follows: 
+
+    FROM openjdk:8-jdk-alpine
+    COPY target/spring-boot-docker-complete-0.0.1-SNAPSHOT.jar app.jar
+    ENTRYPOINT ["java","-jar","/app.jar"]
+
+3.1 Run docker image: use port 8081 and the container port on  8080
+  - docker run -p 8081:8080 springio/gs-spring-boot-docker
+ 
+Output: “Hello Docker World” as above shows that the application is correctly containerized. 
+
+3.2 Github: 
+
+My Github repository: SMJen1/gs-spring-boot-docker
+4.	Containerize the application
+
+4.1 Docker
+
+smvanoutlook@ip-172-31-22-16:~/gs-spring-boot-docker/complete$ docker container ls -a
+CONTAINER ID   IMAGE                            COMMAND                CREATED          STATUS                        PORTS     NAMES
+99db45145ab1   springio/gs-spring-boot-docker   "java -jar /app.jar"   44 minutes ago   Exited (130) 34 minutes ago             stoic_matsumoto
+574cb4bb8776   springio/gs-spring-boot-docker   "java -jar /app.jar"   46 minutes ago   Exited (130) 45 minutes ago             kind_kalam
+54787b0a03b4   springio/gs-spring-boot-docker   "java -jar /app.jar"   47 minutes ago   Exited (130) 46 minutes ago             distracted_lehmann
+smvanoutlook@ip-172-31-22-16:~/gs-spring-boot-docker/complete$
+
+
+4.2 Push image to my docker hub: admdevopscit
+
+Docker hub before push:
+ 
+docker login
+docker tag    springio/gs-spring-boot-docker: latest  admdevopscit/capst01_22
+docker push admdevopscit/capst01_22
+
+4.3 A new image of application is now uploaded to my docker hub
+
+5.	Create the cluster - High Availability Kubernetes Cluster
+
+Create the cluster: 
+To learn various methods, I have created cluster on Google Cloud and Azure as well as tested High Availability on SimpliLearn platform 
+5.1 Created a 3-node Google Cloud
+ 
+
+Opened a cloud shell
+Connect to the cluster
+ 
+Connect: gcloud container clusters get-credentials cluster-1 --zone us-central1-c --project deft-tube-354321
+Authorized
+ 
+Cluster is working
+ 
+kubectl get nodes -o wide
+kubectl run nginxpod --image=nginx:latest 
+ 
+kubectl get pods -o wide
+ 
+----
+5.2 Create An Azure based Kubernetes cluster (for additional practice)
+
+Create Log Analytics workspace
+ 
+Validation
+Create a Kubernetes cluster
+Connect 
+Cloud-Shell
+ 
+A cluster with master (managed by Azure) and 2 nodes is now set up
+ 
+6.	Create a scalable deployment on Azure
+$ vim scalable-hello.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: ha-dep
+  name: ha-deploy 
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: ha-dep
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: ha-dep
+    spec:
+      containers:
+      - image: admdevopscit/capst01_22:latest
+        name: hello-world
+        resources: 
+         limits: 
+          cpu: 100m
+         requests: 
+          cpu: 100m
+
+ 
+$    kubectl apply -f scalable-hello.yaml
+$ kubectl get deployments
+
+6.1 Expose deployments as service
+kubectl expose deployment  ha-deploy --name ha-scale-svc-02 --target-port=8080 --port=80 
+
+The service is now on port 80 and running. 
+
+Kubectl get pods
+ 
+Get the IP address of the svc
+$  kubectl get svc
+
+ 
+
+NAME              TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+ha-scale-svc-02   ClusterIP   10.0.9.3     <none>        80/TCP    3m57s
+
+
+
+---
+7.	Install Docker and Kubernetes on the cluster
+As mentioned above and installed, the Docker was pre-installed and Kubernetes was installed in the class using kubeadm. 
+
+8.	Creating a Horizontal Pod Autoscaler on SimpliLearn platform 
+Check kubctl 
+
+Pull an image created for “hello world” from my docker hub
+$  docker pull admdevopscit/capst01_22
+See images 
+$ docker image ls
+A new image admdevopscit/capst01_22:latest is now listed
+
+9.	Using Terraform to provision EC2
+
+In this section I have  used terraform to provision an EC2. I am doing this only as demonstration of terraform as an automation tool widely used in production environment through CLI. However since the cluster is a very small one and only created by kubeadm, I am just using the above as an illustartion. In real production environment, I would be using ansible/terraform, 
+
+Just to demonstrate, I have cleaned up all EC2. In the following console dashboard, you will notice no instance. 
+
+I have also noted AWS details as required: 
+access_key = "hidden from view as per SimpliLearn policy "
+secret_key = " hidden from view as per SimpliLearn policy "
+token = " hidden from view as per SimpliLearn policy”
+region = "us-east-1"
+
+9.1 Install Terraform 
+
+smvanoutlook@smvanoutlook:~$ history
+    1  10-Jul-2022 21:45:45 terraform version
+    2  10-Jul-2022 21:49:26 cd Downloads
+    3  10-Jul-2022 21:49:29 ls
+    4  10-Jul-2022 21:50:19 unzip terraform_1.2.4_linux_amd64.zip
+    5  10-Jul-2022 21:51:03 sudo mv terraform /usr/local/bin
+    6  10-Jul-2022 21:51:21 cd ..
+    7  10-Jul-2022 21:51:45 terraform -version
+    8  10-Jul-2022 21:52:34 history
+
+
+9.2 Make a directory for new project 
+mkdir terra-01
+
+9.3 Initializing terraform 
+ 
+9.4	terraform plan and apply
+
+1 resource created
+We can go back to AWS console and find (may take a minute) a new EC2 instance is now created
+
+9.5	A new EC2 instance is now  created by CLI and can be verified on console
+
+10.	Add a user (two different ways): 
+First check if RBAC is activated on the cluster
+ 
+oot@master:~# kubectl describe po -n kube-system kube-apiserver-master | grep RBAC
+      --authorization-mode=Node,RBAC
+
+Confirmed!
+Next create a dashboard for UI access
+Deploy Dashboard
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
+
+ 
+
+Create user to access dashboard
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+
+In the above we are creating a service-account that will give cluster admin permission to admin account. This way we are able to create.  
+$ vim dash-res.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+
+We will note above two secrets have been created
+
+root@master:~# kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
+namespace/kubernetes-dashboard created
+serviceaccount/kubernetes-dashboard created
+service/kubernetes-dashboard created
+secret/kubernetes-dashboard-certs created
+secret/kubernetes-dashboard-csrf created
+secret/kubernetes-dashboard-key-holder created
+configmap/kubernetes-dashboard-settings created
+role.rbac.authorization.k8s.io/kubernetes-dashboard created
+clusterrole.rbac.authorization.k8s.io/kubernetes-dashboard created
+rolebinding.rbac.authorization.k8s.io/kubernetes-dashboard created
+clusterrolebinding.rbac.authorization.k8s.io/kubernetes-dashboard created
+deployment.apps/kubernetes-dashboard created
+service/dashboard-metrics-scraper created
+deployment.apps/dashboard-metrics-scraper created
+
+Next to access dashboard, we will use kubectl proxy
+$ kubectl proxy
+
+root@master:~# kubectl proxy
+Starting to serve on 127.0.0.1:8001
+
+So we open the desktop
+ 
+Browse the dashboard http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/.
+ 
+Unfortunately Simplilearn dashboard is not working despite many attempts so I will stop this step here. The user as required is already created in above step.  
+--
+10.2 Another approach to adding user: 
+https://faun.pub/assign-permissions-to-an-user-in-kubernetes-an-overview-of-rbac-based-authz-in-k8s-7d9e5e1099f1
+
+kubectl describe po -n kube-system kube-apiserver-<master node name>
+kubectl describe po -n kube-system kube-apiserver-master
+root@master:~# kubectl describe po -n kube-system kube-apiserver-master | grep RBAC
+      --authorization-mode=Node,RBAC
+
+RBAC Confirmed!
+kubectl api-resources | grep "NAMESPACED\|Role"
+
+Let us first create the pod-reader ClusterRole:
+
+kubectl create clusterrole pod-reader --verb=get,list,watch --resource=pods,pods/log
+
+root@master:~# kubectl create clusterrole pod-reader --verb=get,list,watch --resource=pods,pods/log
+clusterrole.rbac.authorization.k8s.io/pod-reader created
+ 
+Check if created
+kubectl describe clusterrole pod-reader
+
+Next, we create the node-reader ClusterRole:
+
+kubectl create clusterrole node-reader --verb=get,list,watch --resource=nodes
+
+ 
+root@master:~# kubectl create clusterrole node-reader --verb=get,list,watch --resource=nodes
+clusterrole.rbac.authorization.k8s.io/node-reader created
+
+Finally: And finally the Role deployment-admin (namespace is “round-table”):
+
+kubectl create role deployment-admin -n round-table --verb=create,delete,deletecollection,get,list,patch,update,watch --resource=deployments 
+
+As an alternative, you can use a wildcard for all verbs:
+
+kubectl create role deployment-admin -n round-table --verb='*' --resource=deployments
+
+Binding the (Cluster-)Roles to Users and Groups:
+They can be created as follows
+kubectl create rolebinding -n round-table pod-reader --clusterrole=pod-reader --group=knights
+
+kubectl create rolebinding -n round-table deployment-admin --role=deployment-admin --group=knights
+
+kubectl create clusterrolebinding node-reader --clusterrole=node-reader --user=lancelot
+
+For a final confirmation:
+kubectl get rolebindings.rbac.authorization.k8s.io -n round-table -o wide
+ 
+kubectl get clusterrolebindings.rbac.authorization.k8s.io node-reader -o wide
+
+NAME          ROLE                      AGE    USERS      GROUPS   SERVICEACCOUNTS
+node-reader   ClusterRole/node-reader   2m1s   lancelot            
+ 
+---
+
+11.1	ETCD Backup (two different ways including as a daily cron-job) and take snapshot 
+
+ 
+Step 1 - Check ETCD version 
+
+kubectl -n kube-system describe po etcd-master | grep Image
+ 
+Image: k8s.gcr.io/etcd:3.4.13-0
+Image ID: docker-pullable://k8s.gcr.io/etcd@sha256:4ad90a11b55313b182afc186b9876c8e891531b8db4c9bf1541953021618d0e2
+
+root@master:~# kubectl -n kube-system describe po etcd-master | grep Image
+    Image:         k8s.gcr.io/etcd:3.5.1-0
+    Image ID:      docker-pullable://k8s.gcr.io/etcd@sha256:64b9ea357325d5db9f8a723dcf503b5a449177b17ac87d69481e126bb724c263
+root@master:~#
+
+Step 2: Take Backup
+
+Problem solving
+root@master:~# ETCDCTL_API=3 etcdctl snapshot save --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key --endpoints=127.0.0.1:2379 /opt/snapshot-data.db
+
+Command 'etcdctl' not found, but can be installed with:
+
+snap install etcd         # version 3.4.5, or
+apt  install etcd-client  # version 3.2.26+dfsg-6
+See 'snap info etcd' for additional versions.
+
+
+Problem solving:
+ 
+oot@master:~# ETCDCTL_API=3 etcdctl snapshot save --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key --endpoints=127.0.0.1:2379 /opt/snapshot-data.db
+Error: open /etc/kubernetes/pki/etcd/server.crt: permission denied
+
+Solution: Ref https://discuss.kubernetes.io/t/etcdctl-backup-permission-denied-exception/14244/2
+The trick is to install etcdctl with the command
+sudo apt install etcd-client
+not with the command
+sudo snap install etcd
+
+ETCDCTL_API=3 etcdctl snapshot save --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key --endpoints=127.0.0.1:2379  /opt/snapshot-data.db
+
+Snapshot saved at /opt/snapshot-data.db
+
+Once etcd version is noted, saved the snapshot at a particular location by using below etcdctl snapshot save command. 
+
+
+ETCDCTL_API=3 etcdctl snapshot save --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key --endpoints=127.0.0.1:2379 /opt/snapshot-data.db
+
+Snapshot saved at /opt/snapshot-data.db 
+
+11.2 ETCD Backup – A daily Cron-job at 7 am: 
+There is a better approach to use a cron-job to back up ETCD. Following is an example of cron-job every day at 7 am 
+
+Forked at: https://gist.github.com/SMJen1/541d218643890d5a20a2c7cd520aeb98
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 8Gi
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - args:
+            - -c
+            - etcdctl --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt
+              --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt --key=/etc/kubernetes/pki/etcd/healthcheck-client.key
+              snapshot save /backup/etcd-snapshot-$(date +%Y%m%d_%H%M%S_%Z).db
+            command:
+            - /bin/sh
+            env:
+            - name: ETCDCTL_API
+              value: "3"
+            image: k8s.gcr.io/etcd-amd64:3.3.15
+            imagePullPolicy: IfNotPresent
+            name: backup
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+            - mountPath: /etc/kubernetes/pki/etcd
+              name: etcd-certs
+              readOnly: true
+            - mountPath: /backup
+              name: backup
+          - args:
+            - -c
+            - find /backup -type f -mtime +30 -name '*.db' -exec rm -- '{}' \;
+            command:
+            - /bin/sh
+            image: busybox:1.31.1
+            imagePullPolicy: IfNotPresent
+            name: backup-purge
+            volumeMounts:
+            - mountPath: /backup
+              name: backup
+          dnsPolicy: ClusterFirst
+          hostNetwork: true
+          nodeSelector:
+            node-role.kubernetes.io/master: ""
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          tolerations:
+          - effect: NoSchedule
+            operator: Exists
+          volumes:
+          - hostPath:
+              path: /etc/kubernetes/pki/etcd
+              type: DirectoryOrCreate
+            name: etcd-certs
+          - name: backup
+            persistentVolumeClaim:
+              claimName: etcd-backup
+  schedule: "0 7 * * *"
+  successfulJobsHistoryLimit: 3
+  suspend: false
+
+12  Horizontal Pod Autoscaler - Set criteria such that if the memory of CPU goes beyond 50%, environments automatically get scaled up and configured
+$  vim scalable-hello.yaml
+Horizontal Pod Autoscaler - Create a deployment with container resource limits -
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: ha-dep
+  name: ha-deploy 
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: ha-dep
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: ha-dep
+    spec:
+      containers:
+      - image: admdevopscit/capst01_22:latest
+        name: hello-world
+        resources: 
+         limits: 
+          cpu: 100m
+         requests: 
+          cpu: 100m
+
+$ kubectl apply -f scalable-hello.yaml
+
+12.1 Deployment created
+ 
+12.2 Check deployment with 4 replicas
+ 
+As a result, 4 pods are now running
+ 
+12.3 Expose the deployment 
+kubectl expose deployment  ha-deploy --name ha-scale-svc-02 --target-port=8080 --port=80 
+
+The service is now on port 80 and running
+
+kubectl get svc
+ha-scale-svc-02   ClusterIP   10.97.238.252   <none>        80/TCP    8m33s
+
+12.4 Set criteria such that if the memory of CPU goes beyond 50%, environments automatically get scaled up and configured
+
+kubectl autoscale deployment ha-deploy --cpu-percent 50 --min 3 --max 8
+
+12.5 Generate Load on the deployment
+On Worker2
+sudo apt update --fix-missing
+sudo apt install apache2-utils
+ab -n 500000 -c 1000  http:// 10.97.238.252/
+
+Now watch changes on Master
+watch kubectl top pods
+
+12.6 Increasing load on worker 2
+Pods are increasing up to 10 and when closed loading from worker 2 again back to 4 pods.
+July 08 – final test (
+Three pod deployment: ha-deploy-03 
+
+The file used: 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: ha-dep
+  name: ha-deploy-03
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ha-dep
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: ha-dep
+    spec:
+      containers:
+      - image: admdevopscit/capst01_22:latest
+        name: hello-world
+        resources:
+         limits:
+          cpu: 100m
+         requests:
+          cpu: 100m
+
+
+# Expose déploiement 
+kubectl expose deployment  ha-deploy-03 --name ha-scale-svc-03 --target-port=8080 --port=80
+
+ 
+#The service is now available
+ha-scale-svc-03 with ClusterIP   10.99.33.26 and on port 80/TCP
+
+ 
+# Deployments
+ 
+#Autoscale the deployment – for quick result we will this time use CPU threshold ad 10%
+Autoscale the deployment
+kubectl autoscale deployment ha-deploy-03 --cpu-percent 10 --min 3 --max 10
+
+Get the IP address of the svc
+kubectl get svc
+ha-scale-svc-03   ClusterIP   10.99.33.26     <none>        80/TCP    8m7s
+
+Test: On worker-02 curl using svc IP and post 80
+
+
+Now generate load
+Generate Load on the deployment
+On Worker2
+sudo apt update --fix-missing
+sudo apt install apache2-utils
+ab -n 500000 -c 1000  http://<service-ip>/
+
+
+Problem solving 
+t@worker02:~# sudo apt install apache2-utils
+Waiting for cache lock: Could not get lock /var/lib/dpkg/lock-frontend. It is held by process 15800 (unattended-upgr)... 222s
+
+sudo rm /var/lib/dpkg/lock-frontend
+
+Finally…
+
+This results into scaling pods up and down 
+ 
+
+13. Add a user: 
+First check if RBAC is activated on the cluster
+ 
+oot@master:~# kubectl describe po -n kube-system kube-apiserver-master | grep RBAC
+      --authorization-mode=Node,RBAC
+
+Confirmed!
+Next create a dashboard for UI access
+Deploy Dashboard
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
+
+ 
+
+Create user to access dashboard
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+
+In the above we are creating a service-account that will give cluster admin permission to admin account. This way we are able to create.  
+$ vim dash-res.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+
+We will note above two secrets have been created
+
+root@master:~# kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
+namespace/kubernetes-dashboard created
+serviceaccount/kubernetes-dashboard created
+service/kubernetes-dashboard created
+secret/kubernetes-dashboard-certs created
+secret/kubernetes-dashboard-csrf created
+secret/kubernetes-dashboard-key-holder created
+configmap/kubernetes-dashboard-settings created
+role.rbac.authorization.k8s.io/kubernetes-dashboard created
+clusterrole.rbac.authorization.k8s.io/kubernetes-dashboard created
+rolebinding.rbac.authorization.k8s.io/kubernetes-dashboard created
+clusterrolebinding.rbac.authorization.k8s.io/kubernetes-dashboard created
+deployment.apps/kubernetes-dashboard created
+service/dashboard-metrics-scraper created
+deployment.apps/dashboard-metrics-scraper created
+
+Next to access dashboard, we will use kubectl proxy
+$ kubectl proxy
+ 
+root@master:~# kubectl proxy
+Starting to serve on 127.0.0.1:8001
+
+So we open the desktop
+ 
+
+Browse the dashboard http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/.
+ 
+Unfortunately Simplilearn dashboard is not working despite many attempts so I will stop this step here. The user as required is already created in above step.  
+--
+14. Another approach to adding user: 
+https://faun.pub/assign-permissions-to-an-user-in-kubernetes-an-overview-of-rbac-based-authz-in-k8s-7d9e5e1099f1
+
+kubectl describe po -n kube-system kube-apiserver-<master node name>
+kubectl describe po -n kube-system kube-apiserver-master
+root@master:~# kubectl describe po -n kube-system kube-apiserver-master | grep RBAC
+      --authorization-mode=Node,RBAC
+
+Confirmed!
+kubectl api-resources | grep "NAMESPACED\|Role"
+
+Following roles: 
+ 
+Let us first create the pod-reader ClusterRole:
+
+kubectl create clusterrole pod-reader --verb=get,list,watch --resource=pods,pods/log
+
+root@master:~# kubectl create clusterrole pod-reader --verb=get,list,watch --resource=pods,pods/log
+clusterrole.rbac.authorization.k8s.io/pod-reader created
+ 
+Check if created
+kubectl describe clusterrole pod-reader
+
+ 
+
+Next, we create the node-reader ClusterRole:
+
+kubectl create clusterrole node-reader --verb=get,list,watch --resource=nodes
+
+ 
+root@master:~# kubectl create clusterrole node-reader --verb=get,list,watch --resource=nodes
+clusterrole.rbac.authorization.k8s.io/node-reader created
+
+Finally: And finally the Role deployment-admin (remember: the namespace is “round-table”):
+
+kubectl create role deployment-admin -n round-table --verb=create,delete,deletecollection,get,list,patch,update,watch --resource=deployments
+
+ 
+
+As an alternative, you can use a wildcard for all verbs:
+
+kubectl create role deployment-admin -n round-table --verb='*' --resource=deployments
+
+ 
+Binding the (Cluster-)Roles to Users and Groups:
+They can be created as follows
+kubectl create rolebinding -n round-table pod-reader --clusterrole=pod-reader --group=knights
+
+ 
+kubectl create rolebinding -n round-table deployment-admin --role=deployment-admin --group=knights
+
+kubectl create clusterrolebinding node-reader --clusterrole=node-reader --user=lancelot
+
+For a final confirmation:
+kubectl get rolebindings.rbac.authorization.k8s.io -n round-table -o wide
+ 
+kubectl get clusterrolebindings.rbac.authorization.k8s.io node-reader -o wide
+
+NAME          ROLE                      AGE    USERS      GROUPS   SERVICEACCOUNTS
+node-reader   ClusterRole/node-reader   2m1s   lancelot            
+ 
+----
+
+15. Conclusion: 
+In the above project, we have used Kubernetes,  an open-source system for deploying, scaling and managing containerized applications automatically. With the help of Kubernetes, it is evident that we can deploy our applications quickly, scale it according to our requirement without having to stop anything in the process.
+In addition, the use of Cloud providers such as Azure, Google Cloud and AWS is illustrated. The seamless integration of GitHub to Containerization, configuration management and finally orchestration of the application containers/pods using Kubernetes represents a CICD pipeline that is highly reliable, scalable and easy to use. 
